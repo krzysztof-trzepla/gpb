@@ -3126,14 +3126,16 @@ format_bytes_verifier() ->
         end).
 
 format_verifier_auxiliaries() ->
-    [gpb_codegen:format_fn(
-        mk_type_error,
-        fun(Error, ValueSeen, Path) ->
-            Path2 = prettify_path(Path),
-            erlang:error({gpb_type_error,
-                {Error, [{value, ValueSeen}, {path, Path2}]}})
-        end),
+    [?f("-spec mk_type_error(any(), any(), any()) -> no_return().~n"),
+        gpb_codegen:format_fn(
+            mk_type_error,
+            fun(Error, ValueSeen, Path) ->
+                Path2 = prettify_path(Path),
+                erlang:error({gpb_type_error,
+                    {Error, [{value, ValueSeen}, {path, Path2}]}})
+            end),
         "\n",
+        ?f("-spec prettify_path(any()) -> any().~n"),
         gpb_codegen:format_fn(
             prettify_path,
             fun([]) ->
@@ -3151,14 +3153,17 @@ format_introspection(Defs, Opts) ->
     MsgDefs = [Item || {{msg, _}, _} = Item <- Defs],
     EnumDefs = [Item || {{enum, _}, _} = Item <- Defs],
     ServiceDefs = [Item || {{service, _}, _} = Item <- Defs],
-    [gpb_codegen:format_fn(
-        get_msg_defs, fun() -> '<Defs>' end,
-        [replace_tree('<Defs>', msg_def_trees(EnumDefs, MsgDefs, Opts))]),
+    [?f("-spec get_msg_defs() -> any().~n"),
+        gpb_codegen:format_fn(
+            get_msg_defs, fun() -> '<Defs>' end,
+            [replace_tree('<Defs>', msg_def_trees(EnumDefs, MsgDefs, Opts))]),
         "\n",
+        ?f("-spec get_msg_names() -> any().~n"),
         gpb_codegen:format_fn(
             get_msg_names, fun() -> '<Names>' end,
             [replace_term('<Names>', [MsgName || {{msg, MsgName}, _} <- Defs])]),
         "\n",
+        ?f("-spec get_enum_names() -> any().~n"),
         gpb_codegen:format_fn(
             get_enum_names, fun() -> '<Names>' end,
             [replace_term('<Names>', [EnumName || {{enum, EnumName}, _} <- Defs])]),
@@ -3234,54 +3239,60 @@ field_tree(#gpb_oneof{fields = OFields} = F, Opts) ->
         Opts).
 
 format_fetch_msg_defs([]) ->
-    gpb_codegen:format_fn(
-        fetch_msg_def,
-        fun(MsgName) -> erlang:error({no_such_msg, MsgName}) end);
+    [?f("-spec fetch_msg_def(any()) -> no_return().~n"),
+        gpb_codegen:format_fn(
+            fetch_msg_def,
+            fun(MsgName) -> erlang:error({no_such_msg, MsgName}) end)];
 format_fetch_msg_defs(_MsgDefs) ->
-    gpb_codegen:format_fn(
-        fetch_msg_def,
-        fun(MsgName) ->
-            case find_msg_def(MsgName) of
-                Fs when is_list(Fs) -> Fs;
-                error -> erlang:error({no_such_msg, MsgName})
-            end
-        end).
+    [?f("-spec fetch_msg_def(any()) -> any() | no_return().~n"),
+        gpb_codegen:format_fn(
+            fetch_msg_def,
+            fun(MsgName) ->
+                case find_msg_def(MsgName) of
+                    Fs when is_list(Fs) -> Fs;
+                    error -> erlang:error({no_such_msg, MsgName})
+                end
+            end)].
 
 format_fetch_enum_defs([]) ->
-    gpb_codegen:format_fn(
-        fetch_enum_def,
-        fun(EnumName) -> erlang:error({no_such_enum, EnumName}) end);
+    [?f("-spec fetch_enum_def(any()) -> no_return().~n"),
+        gpb_codegen:format_fn(
+            fetch_enum_def,
+            fun(EnumName) -> erlang:error({no_such_enum, EnumName}) end)];
 format_fetch_enum_defs(_EnumDefs) ->
-    gpb_codegen:format_fn(
-        fetch_enum_def,
-        fun(EnumName) ->
-            case find_enum_def(EnumName) of
-                Es when is_list(Es) -> Es;
-                error -> erlang:error({no_such_enum, EnumName})
-            end
-        end).
+    [?f("-spec fetch_enum_def(any()) -> any() | no_return().~n"),
+        gpb_codegen:format_fn(
+            fetch_enum_def,
+            fun(EnumName) ->
+                case find_enum_def(EnumName) of
+                    Es when is_list(Es) -> Es;
+                    error -> erlang:error({no_such_enum, EnumName})
+                end
+            end)].
 
 format_find_msg_defs(Msgs, Opts) ->
-    gpb_codegen:format_fn(
-        find_msg_def,
-        fun('<MsgName>') -> '<Fields>';
-            (_) -> error
-        end,
-        [repeat_clauses('<MsgName>',
-            [[replace_term('<MsgName>', MsgName),
-                replace_tree('<Fields>', fields_tree(Fields, Opts))]
-                || {{msg, MsgName}, Fields} <- Msgs])]).
+    [?f("-spec find_msg_def(any()) -> any().~n"),
+        gpb_codegen:format_fn(
+            find_msg_def,
+            fun('<MsgName>') -> '<Fields>';
+                (_) -> error
+            end,
+            [repeat_clauses('<MsgName>',
+                [[replace_term('<MsgName>', MsgName),
+                    replace_tree('<Fields>', fields_tree(Fields, Opts))]
+                    || {{msg, MsgName}, Fields} <- Msgs])])].
 
 format_find_enum_defs(Enums) ->
-    gpb_codegen:format_fn(
-        find_enum_def,
-        fun('<EnumName>') -> '<Values>';
-            (_) -> error
-        end,
-        [repeat_clauses('<EnumName>',
-            [[replace_term('<EnumName>', EnumName),
-                replace_term('<Values>', Values)]
-                || {{enum, EnumName}, Values} <- Enums])]).
+    [?f("-spec find_enum_def(any()) -> any().~n"),
+        gpb_codegen:format_fn(
+            find_enum_def,
+            fun('<EnumName>') -> '<Values>';
+                (_) -> error
+            end,
+            [repeat_clauses('<EnumName>',
+                [[replace_term('<EnumName>', EnumName),
+                    replace_term('<Values>', Values)]
+                    || {{enum, EnumName}, Values} <- Enums])])].
 
 
 format_enum_value_symbol_converter_exports(Defs) ->
@@ -3298,15 +3309,17 @@ format_enum_value_symbol_converters(EnumDefs) when EnumDefs /= [] ->
     %% by `format_enum_decoders' is that this function generates
     %% value/symbol converters for all enums, not only for the ones
     %% that are used in messags.
-    [gpb_codegen:format_fn(
-        enum_symbol_by_value,
-        fun('<EnumName>', Value) -> 'cvt'(Value) end,
-        [repeat_clauses(
-            '<EnumName>',
-            [[replace_term('<EnumName>', EnumName),
-                replace_term('cvt', mk_fn(enum_symbol_by_value_, EnumName))]
-                || {{enum, EnumName}, _EnumDef} <- EnumDefs])]),
+    [?f("-spec enum_symbol_by_value(any(), any()) -> any().~n"),
+        gpb_codegen:format_fn(
+            enum_symbol_by_value,
+            fun('<EnumName>', Value) -> 'cvt'(Value) end,
+            [repeat_clauses(
+                '<EnumName>',
+                [[replace_term('<EnumName>', EnumName),
+                    replace_term('cvt', mk_fn(enum_symbol_by_value_, EnumName))]
+                    || {{enum, EnumName}, _EnumDef} <- EnumDefs])]),
         "\n",
+        ?f("-spec enum_value_by_symbol(any(), any()) -> any().~n"),
         gpb_codegen:format_fn(
             enum_value_by_symbol,
             fun('<EnumName>', Sym) -> 'cvt'(Sym) end,
@@ -3316,6 +3329,7 @@ format_enum_value_symbol_converters(EnumDefs) when EnumDefs /= [] ->
                     replace_term('cvt', mk_fn(enum_value_by_symbol_, EnumName))]
                     || {{enum, EnumName}, _EnumDef} <- EnumDefs])]),
         "\n",
+        ?f("-spec ~s(any()) -> any().~n", [mk_fn(enum_symbol_by_value_, EnumName)]),
         [[gpb_codegen:format_fn(
             mk_fn(enum_symbol_by_value_, EnumName),
             fun('<Value>') -> '<Sym>' end,
@@ -3324,6 +3338,7 @@ format_enum_value_symbol_converters(EnumDefs) when EnumDefs /= [] ->
                     replace_term('<Sym>', EnumSym)]
                     || {EnumSym, EnumValue} <- unalias_enum(EnumDef)])]),
             "\n",
+            ?f("-spec ~s(any()) -> any().~n", [mk_fn(enum_value_by_symbol_, EnumName)]),
             gpb_codegen:format_fn(
                 mk_fn(enum_value_by_symbol_, EnumName),
                 fun('<Sym>') -> '<Value>' end,
@@ -3333,10 +3348,12 @@ format_enum_value_symbol_converters(EnumDefs) when EnumDefs /= [] ->
                         || {EnumSym, EnumValue} <- EnumDef])])]
             || {{enum, EnumName}, EnumDef} <- EnumDefs]];
 format_enum_value_symbol_converters([] = _EnumDefs) ->
-    [gpb_codegen:format_fn(
-        enum_symbol_by_value,
-        fun(E, V) -> erlang:error({no_enum_defs, E, V}) end),
+    [?f("-spec enum_symbol_by_value(any(), any()) -> no_return().~n"),
+        gpb_codegen:format_fn(
+            enum_symbol_by_value,
+            fun(E, V) -> erlang:error({no_enum_defs, E, V}) end),
         "\n",
+        ?f("-spec enum_value_by_symbol(any(), any()) -> no_return().~n"),
         gpb_codegen:format_fn(
             enum_value_by_symbol,
             fun(E, V) -> erlang:error({no_enum_defs, E, V}) end),
@@ -3345,12 +3362,14 @@ format_enum_value_symbol_converters([] = _EnumDefs) ->
 format_get_package_name(Defs) ->
     case lists:keyfind(package, 1, Defs) of
         false ->
-            gpb_codegen:format_fn(
-                get_package_name, fun() -> undefined end);
+            [?f("-spec get_package_name() -> any().~n"),
+                gpb_codegen:format_fn(
+                    get_package_name, fun() -> undefined end)];
         {package, Package} ->
-            gpb_codegen:format_fn(
-                get_package_name, fun() -> '<Package>' end,
-                [replace_term('<Package>', Package)])
+            [?f("-spec get_package_name() -> any().~n"),
+                gpb_codegen:format_fn(
+                    get_package_name, fun() -> '<Package>' end,
+                    [replace_term('<Package>', Package)])]
     end.
 
 format_descriptor(Defs, Opts) ->
@@ -3358,16 +3377,18 @@ format_descriptor(Defs, Opts) ->
         true ->
             try gpb_compile_descr:encode_defs_to_descriptor(Defs) of
                 Bin when is_binary(Bin) ->
-                    gpb_codegen:format_fn(
-                        descriptor, fun() -> 'bin' end,
-                        [replace_term(bin, Bin)])
+                    [?f("-spec descriptor() -> any().~n"),
+                        gpb_codegen:format_fn(
+                            descriptor, fun() -> 'bin' end,
+                            [replace_term(bin, Bin)])]
             catch error:undef ->
                 ST = erlang:get_stacktrace(),
                 case {element(1, hd(ST)), element(2, hd(ST))} of
                     {gpb_compile_descr, encode_defs_to_descriptor} ->
-                        gpb_codegen:format_fn(
-                            descriptor,
-                            fun() -> erlang:error(descr_not_avail) end);
+                        [?f("-spec descriptor() -> no_return().~n"),
+                            gpb_codegen:format_fn(
+                                descriptor,
+                                fun() -> erlang:error(descr_not_avail) end)];
                     _ ->
                         %% other error
                         erlang:raise(error, undef, ST)
@@ -3383,77 +3404,84 @@ get_gen_descriptor_by_opts(Opts) ->
 % --- service introspection methods
 
 format_get_service_names(ServiceDefs) ->
-    gpb_codegen:format_fn(
-        get_service_names,
-        fun() -> '<ServiceNames>' end,
-        [replace_term(
-            '<ServiceNames>',
-            [ServiceName || {{service, ServiceName}, _Rpcs} <- ServiceDefs])]).
+    [?f("-spec get_service_names(any()) -> any().~n"),
+        gpb_codegen:format_fn(
+            get_service_names,
+            fun() -> '<ServiceNames>' end,
+            [replace_term(
+                '<ServiceNames>',
+                [ServiceName || {{service, ServiceName}, _Rpcs} <- ServiceDefs])])].
 
 format_get_service_defs(ServiceDefs, Opts) ->
-    gpb_codegen:format_fn(
-        get_service_def,
-        fun('<ServiceName>') -> '<ServiceDef>';
-            (_) -> error
-        end,
-        [repeat_clauses(
-            '<ServiceName>',
-            [[replace_term('<ServiceName>', ServiceName),
-                replace_tree('<ServiceDef>', service_def_tree(ServiceDef, Opts))]
-                || {{service, ServiceName}, _Rpcs} = ServiceDef <- ServiceDefs])]).
+    [?f("-spec get_service_def(any()) -> any().~n"),
+        gpb_codegen:format_fn(
+            get_service_def,
+            fun('<ServiceName>') -> '<ServiceDef>';
+                (_) -> error
+            end,
+            [repeat_clauses(
+                '<ServiceName>',
+                [[replace_term('<ServiceName>', ServiceName),
+                    replace_tree('<ServiceDef>', service_def_tree(ServiceDef, Opts))]
+                    || {{service, ServiceName}, _Rpcs} = ServiceDef <- ServiceDefs])])].
 
 format_get_rpc_names(ServiceDefs) ->
-    gpb_codegen:format_fn(
-        get_rpc_names,
-        fun('<ServiceName>') -> '<ServiceRpcNames>';
-            (_) -> error
-        end,
-        [repeat_clauses('<ServiceName>',
-            [[replace_term('<ServiceName>', ServiceName),
-                replace_term('<ServiceRpcNames>',
-                    [RpcName
-                        || #?gpb_rpc{name = RpcName} <- Rpcs])]
-                || {{service, ServiceName}, Rpcs} <- ServiceDefs])]).
+    [?f("-spec get_rpc_names(any()) -> any().~n"),
+        gpb_codegen:format_fn(
+            get_rpc_names,
+            fun('<ServiceName>') -> '<ServiceRpcNames>';
+                (_) -> error
+            end,
+            [repeat_clauses('<ServiceName>',
+                [[replace_term('<ServiceName>', ServiceName),
+                    replace_term('<ServiceRpcNames>',
+                        [RpcName
+                            || #?gpb_rpc{name = RpcName} <- Rpcs])]
+                    || {{service, ServiceName}, Rpcs} <- ServiceDefs])])].
 
 format_find_rpc_defs(ServiceDefs) ->
-    gpb_codegen:format_fn(
-        find_rpc_def,
-        fun('<ServiceName>', RpcName) -> '<ServiceFindRpcDef>'(RpcName);
-            (_, _) -> error
-        end,
-        [repeat_clauses(
-            '<ServiceName>',
-            [[replace_term('<ServiceName>', ServiceName),
-                replace_term('<ServiceFindRpcDef>',
-                    mk_fn(find_rpc_def_, ServiceName))]
-                || {{service, ServiceName}, _} <- ServiceDefs])]).
+    [?f("-spec find_rpc_def(any(), any()) -> any().~n"),
+        gpb_codegen:format_fn(
+            find_rpc_def,
+            fun('<ServiceName>', RpcName) -> '<ServiceFindRpcDef>'(RpcName);
+                (_, _) -> error
+            end,
+            [repeat_clauses(
+                '<ServiceName>',
+                [[replace_term('<ServiceName>', ServiceName),
+                    replace_term('<ServiceFindRpcDef>',
+                        mk_fn(find_rpc_def_, ServiceName))]
+                    || {{service, ServiceName}, _} <- ServiceDefs])])].
 
 format_find_service_rpc_defs(ServiceName, Rpcs, Opts) ->
-    gpb_codegen:format_fn(
-        mk_fn(find_rpc_def_, ServiceName),
-        fun('<RpcName>') -> '<RpcDef>';
-            (_) -> error
-        end,
-        [repeat_clauses('<RpcName>',
-            [[replace_term('<RpcName>', RpcName),
-                replace_tree('<RpcDef>', rpc_def_tree(Rpc, Opts))]
-                || #?gpb_rpc{name = RpcName} = Rpc <- Rpcs])]).
+    [?f("-spec ~s(any()) -> any().~n", [mk_fn(find_rpc_def_, ServiceName)]),
+        gpb_codegen:format_fn(
+            mk_fn(find_rpc_def_, ServiceName),
+            fun('<RpcName>') -> '<RpcDef>';
+                (_) -> error
+            end,
+            [repeat_clauses('<RpcName>',
+                [[replace_term('<RpcName>', RpcName),
+                    replace_tree('<RpcDef>', rpc_def_tree(Rpc, Opts))]
+                    || #?gpb_rpc{name = RpcName} = Rpc <- Rpcs])])].
 
 format_fetch_rpc_defs([]) ->
-    gpb_codegen:format_fn(
-        fetch_rpc_def,
-        fun(ServiceName, RpcName) ->
-            erlang:error({no_such_rpc, ServiceName, RpcName})
-        end);
+    [?f("-spec fetch_rpc_def(any(), any()) -> no_return().~n"),
+        gpb_codegen:format_fn(
+            fetch_rpc_def,
+            fun(ServiceName, RpcName) ->
+                erlang:error({no_such_rpc, ServiceName, RpcName})
+            end)];
 format_fetch_rpc_defs(_ServiceDefs) ->
-    gpb_codegen:format_fn(
-        fetch_rpc_def,
-        fun(ServiceName, RpcName) ->
-            case find_rpc_def(ServiceName, RpcName) of
-                Def when is_tuple(Def) -> Def;
-                error -> erlang:error({no_such_rpc, ServiceName, RpcName})
-            end
-        end).
+    [?f("-spec fetch_rpc_def(any(), any()) -> any() | no_return().~n"),
+        gpb_codegen:format_fn(
+            fetch_rpc_def,
+            fun(ServiceName, RpcName) ->
+                case find_rpc_def(ServiceName, RpcName) of
+                    Def when is_tuple(Def) -> Def;
+                    error -> erlang:error({no_such_rpc, ServiceName, RpcName})
+                end
+            end)].
 
 service_def_tree({{service, ServiceName}, Rpcs}, Opts) ->
     erl_syntax:tuple(
@@ -3544,7 +3572,7 @@ format_msg_record(Msg, Fields, Opts, Defs) ->
         outdent_first(format_hfields(8 + 1, Fields, Opts, Defs)),
         "\n",
         ?f("        }).~n"),
-        ?f("-endif.")].
+        ?f("-endif.~n")].
 
 format_hfields(Indent, Fields, CompileOpts, Defs) ->
     TypeSpecs = get_type_specs_by_opts(CompileOpts),
