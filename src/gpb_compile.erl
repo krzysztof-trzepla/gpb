@@ -1395,9 +1395,11 @@ format_erl(Mod, Defs, AnRes, Opts) ->
             "\n",
             format_introspection(Defs, Opts),
             "\n",
+            ?f("-spec gpb_version_as_string() -> any().~n"),
             ?f("gpb_version_as_string() ->~n"),
             ?f("    \"~s\".~n", [gpb:version_as_string()]),
             "\n",
+            ?f("-spec gpb_version_as_list() -> any().~n"),
             ?f("gpb_version_as_list() ->~n"),
             ?f("    ~s.~n", [gpb_version_as_list_pretty()])]).
 
@@ -1439,11 +1441,13 @@ format_encoders_top_function_no_msgs(Opts) ->
                       records -> [];
                       maps -> [?expr(_MsgName)]
                   end,
-    [gpb_codegen:format_fn(
-        encode_msg,
-        fun(Msg, '<MsgName>') -> encode_msg(Msg, '<MsgName>', []) end,
-        [splice_trees('<MsgName>', MsgNameVars)]),
+    [?f("-spec encode_msg(any()) -> any() | no_return().~n"),
+        gpb_codegen:format_fn(
+            encode_msg,
+            fun(Msg, '<MsgName>') -> encode_msg(Msg, '<MsgName>', []) end,
+            [splice_trees('<MsgName>', MsgNameVars)]),
         "\n",
+        ?f("-spec encode_msg(any(), any()) -> any() | no_return().~n"),
         gpb_codegen:format_fn(
             encode_msg,
             fun(_Msg, '<MsgName>', _Opts) ->
@@ -1458,11 +1462,13 @@ format_encoders_top_function_msgs(Defs, Opts) ->
                       records -> [];
                       maps -> [?expr(MsgName)]
                   end,
-    [gpb_codegen:format_fn(
-        encode_msg,
-        fun(Msg, '<MsgName>') -> encode_msg(Msg, '<MsgName>', []) end,
-        [splice_trees('<MsgName>', MsgNameVars)]),
+    [?f("-spec encode_msg(any()) -> any().~n"),
+        gpb_codegen:format_fn(
+            encode_msg,
+            fun(Msg, '<MsgName>') -> encode_msg(Msg, '<MsgName>', []) end,
+            [splice_trees('<MsgName>', MsgNameVars)]),
         "\n",
+        ?f("-spec encode_msg(any(), any()) -> any().~n"),
         gpb_codegen:format_fn(
             encode_msg,
             fun(Msg, '<MsgName>', '<Opts>') ->
@@ -1940,24 +1946,26 @@ format_decoders_top_function(Defs) ->
     end.
 
 format_decoders_top_function_no_msgs() ->
-    gpb_codegen:format_fn(
-        decode_msg,
-        fun(Bin, _MsgName) when is_binary(Bin) ->
-            erlang:error({gpb_error, no_messages})
-        end).
+    [?f("-spec decode_msg(any(), any()) -> no_return().~n"),
+        gpb_codegen:format_fn(
+            decode_msg,
+            fun(Bin, _MsgName) when is_binary(Bin) ->
+                erlang:error({gpb_error, no_messages})
+            end)].
 
 format_decoders_top_function_msgs(Defs) ->
-    gpb_codegen:format_fn(
-        decode_msg,
-        fun(Bin, MsgName) when is_binary(Bin) ->
-            case MsgName of
-                '<MsgName>' -> '<decode-call>'(Bin)
-            end
-        end,
-        [repeat_clauses('<MsgName>',
-            [[replace_term('<MsgName>', MsgName),
-                replace_term('<decode-call>', mk_fn(d_msg_, MsgName))]
-                || {{msg, MsgName}, _Fields} <- Defs])]).
+    [?f("-spec decode_msg(any(), any()) -> any().~n"),
+        gpb_codegen:format_fn(
+            decode_msg,
+            fun(Bin, MsgName) when is_binary(Bin) ->
+                case MsgName of
+                    '<MsgName>' -> '<decode-call>'(Bin)
+                end
+            end,
+            [repeat_clauses('<MsgName>',
+                [[replace_term('<MsgName>', MsgName),
+                    replace_term('<decode-call>', mk_fn(d_msg_, MsgName))]
+                    || {{msg, MsgName}, _Fields} <- Defs])])].
 
 format_decoders(Defs, AnRes, Opts) ->
     [format_enum_decoders(Defs, AnRes),
@@ -2684,17 +2692,19 @@ format_msg_merge_code(Defs, AnRes, Opts) ->
 format_msg_merge_code_no_msgs(Opts) ->
     case get_records_or_maps_by_opts(Opts) of
         records ->
-            gpb_codegen:format_fn(
-                merge_msgs,
-                fun(_Prev, _New) ->
-                    erlang:error({gpb_error, no_messages})
-                end);
+            [?f("-spec merge_msgs(any(), any()) -> no_return().~n"),
+                gpb_codegen:format_fn(
+                    merge_msgs,
+                    fun(_Prev, _New) ->
+                        erlang:error({gpb_error, no_messages})
+                    end)];
         maps ->
-            gpb_codegen:format_fn(
-                merge_msgs,
-                fun(_Prev, _New, _MsgName) ->
-                    erlang:error({gpb_error, no_messages})
-                end)
+            [?f("-spec merge_msgs(any(), any(), any()) -> no_return().~n"),
+                gpb_codegen:format_fn(
+                    merge_msgs,
+                    fun(_Prev, _New, _MsgName) ->
+                        erlang:error({gpb_error, no_messages})
+                    end)]
     end.
 
 format_msg_merge_code_msgs(Defs, AnRes, Opts) ->
@@ -2706,31 +2716,33 @@ format_msg_merge_code_msgs(Defs, AnRes, Opts) ->
 format_merge_msgs_top_level(MsgNames, Opts) ->
     case get_records_or_maps_by_opts(Opts) of
         records ->
-            gpb_codegen:format_fn(
-                merge_msgs,
-                fun(Prev, New) when element(1, Prev) =:= element(1, New) ->
-                    case Prev of
-                        '<msg-type>' -> '<merge-msg>'(Prev, New)
-                    end
-                end,
-                [repeat_clauses(
-                    '<msg-type>',
-                    [[replace_tree('<msg-type>', record_match(MsgName, [])),
-                        replace_term('<merge-msg>', mk_fn(merge_msg_, MsgName))]
-                        || MsgName <- MsgNames])]);
+            [?f("-spec merge_msgs(any(), any()) -> any().~n"),
+                gpb_codegen:format_fn(
+                    merge_msgs,
+                    fun(Prev, New) when element(1, Prev) =:= element(1, New) ->
+                        case Prev of
+                            '<msg-type>' -> '<merge-msg>'(Prev, New)
+                        end
+                    end,
+                    [repeat_clauses(
+                        '<msg-type>',
+                        [[replace_tree('<msg-type>', record_match(MsgName, [])),
+                            replace_term('<merge-msg>', mk_fn(merge_msg_, MsgName))]
+                            || MsgName <- MsgNames])])];
         maps ->
-            gpb_codegen:format_fn(
-                merge_msgs,
-                fun(Prev, New, MsgName) ->
-                    case MsgName of
-                        '<msg-type>' -> '<merge-msg>'(Prev, New)
-                    end
-                end,
-                [repeat_clauses(
-                    '<msg-type>',
-                    [[replace_tree('<msg-type>', erl_syntax:atom(MsgName)),
-                        replace_term('<merge-msg>', mk_fn(merge_msg_, MsgName))]
-                        || MsgName <- MsgNames])])
+            [?f("-spec merge_msgs(any(), any(), any()) -> any().~n"),
+                gpb_codegen:format_fn(
+                    merge_msgs,
+                    fun(Prev, New, MsgName) ->
+                        case MsgName of
+                            '<msg-type>' -> '<merge-msg>'(Prev, New)
+                        end
+                    end,
+                    [repeat_clauses(
+                        '<msg-type>',
+                        [[replace_tree('<msg-type>', erl_syntax:atom(MsgName)),
+                            replace_term('<merge-msg>', mk_fn(merge_msg_, MsgName))]
+                            || MsgName <- MsgNames])])]
     end.
 
 format_msg_merger(MsgName, [], _AnRes, _Opts) ->
@@ -2892,29 +2904,30 @@ format_verifiers_top_function(Defs, Opts) ->
                       records -> [];
                       maps -> [?expr(MsgName)]
                   end,
-    gpb_codegen:format_fn(
-        verify_msg,
-        fun(Msg, '<MsgName>') ->
-            case '<MsgOrMsgName>' of
-                '<msg-match>' -> '<verify-msg>'(Msg, ['<MsgName>']);
-                _ -> mk_type_error(not_a_known_message, Msg, [])
-            end
-        end,
-        [repeat_clauses(
-            '<msg-match>',
-            [[replace_tree('<msg-match>',
-                case Mapping of
-                    records -> record_match(MsgName, []);
-                    maps -> erl_syntax:atom(MsgName)
-                end),
-                replace_term('<verify-msg>', mk_fn(v_msg_, MsgName)),
-                replace_term('<MsgName>', MsgName)]
-                || {{msg, MsgName}, _MsgDef} <- Defs]),
-            replace_tree('<MsgOrMsgName>', case Mapping of
-                                               records -> ?expr(Msg);
-                                               maps -> ?expr(MsgName)
-                                           end),
-            splice_trees('<MsgName>', MsgNameVars)]).
+    [?f("-spec verify_msg(any()) -> any() | no_return().~n"),
+        gpb_codegen:format_fn(
+            verify_msg,
+            fun(Msg, '<MsgName>') ->
+                case '<MsgOrMsgName>' of
+                    '<msg-match>' -> '<verify-msg>'(Msg, ['<MsgName>']);
+                    _ -> mk_type_error(not_a_known_message, Msg, [])
+                end
+            end,
+            [repeat_clauses(
+                '<msg-match>',
+                [[replace_tree('<msg-match>',
+                    case Mapping of
+                        records -> record_match(MsgName, []);
+                        maps -> erl_syntax:atom(MsgName)
+                    end),
+                    replace_term('<verify-msg>', mk_fn(v_msg_, MsgName)),
+                    replace_term('<MsgName>', MsgName)]
+                    || {{msg, MsgName}, _MsgDef} <- Defs]),
+                replace_tree('<MsgOrMsgName>', case Mapping of
+                                                   records -> ?expr(Msg);
+                                                   maps -> ?expr(MsgName)
+                                               end),
+                splice_trees('<MsgName>', MsgNameVars)])].
 
 format_verifiers(Defs, AnRes, Opts) ->
     [format_msg_verifiers(Defs, AnRes, Opts),
@@ -3329,16 +3342,16 @@ format_enum_value_symbol_converters(EnumDefs) when EnumDefs /= [] ->
                     replace_term('cvt', mk_fn(enum_value_by_symbol_, EnumName))]
                     || {{enum, EnumName}, _EnumDef} <- EnumDefs])]),
         "\n",
-        ?f("-spec ~s(any()) -> any().~n", [mk_fn(enum_symbol_by_value_, EnumName)]),
-        [[gpb_codegen:format_fn(
-            mk_fn(enum_symbol_by_value_, EnumName),
-            fun('<Value>') -> '<Sym>' end,
-            [repeat_clauses('<Value>',
-                [[replace_term('<Value>', EnumValue),
-                    replace_term('<Sym>', EnumSym)]
-                    || {EnumSym, EnumValue} <- unalias_enum(EnumDef)])]),
+        [[?f("-spec '~s'(any()) -> any().~n", [mk_fn(enum_symbol_by_value_, EnumName)]),
+            gpb_codegen:format_fn(
+                mk_fn(enum_symbol_by_value_, EnumName),
+                fun('<Value>') -> '<Sym>' end,
+                [repeat_clauses('<Value>',
+                    [[replace_term('<Value>', EnumValue),
+                        replace_term('<Sym>', EnumSym)]
+                        || {EnumSym, EnumValue} <- unalias_enum(EnumDef)])]),
             "\n",
-            ?f("-spec ~s(any()) -> any().~n", [mk_fn(enum_value_by_symbol_, EnumName)]),
+            ?f("-spec '~s'(any()) -> any().~n", [mk_fn(enum_value_by_symbol_, EnumName)]),
             gpb_codegen:format_fn(
                 mk_fn(enum_value_by_symbol_, EnumName),
                 fun('<Sym>') -> '<Value>' end,
@@ -3404,7 +3417,7 @@ get_gen_descriptor_by_opts(Opts) ->
 % --- service introspection methods
 
 format_get_service_names(ServiceDefs) ->
-    [?f("-spec get_service_names(any()) -> any().~n"),
+    [?f("-spec get_service_names() -> any().~n"),
         gpb_codegen:format_fn(
             get_service_names,
             fun() -> '<ServiceNames>' end,
