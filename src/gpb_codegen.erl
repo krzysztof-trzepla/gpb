@@ -179,9 +179,9 @@
 %%@hidden
 parse_transform(Forms, Opts) ->
     with_increased_backtrace_depth(
-      fun() ->
-              transform_forms(Forms, Opts)
-      end).
+        fun() ->
+            transform_forms(Forms, Opts)
+        end).
 
 %%@hidden
 -spec mk_fn(atom(), fun((...) -> term())) -> no_return().
@@ -216,7 +216,7 @@ exprs(E1, E2, E3, E4, Ts) -> error_invalid_call(exprs, [E1, E2, E3, E4, Ts]).
 %%@hidden
 -spec exprs(term(), term(), term(), term(), term(), list()) -> no_return().
 exprs(E1, E2, E3, E4, E5, Ts) -> error_invalid_call(exprs,
-                                                    [E1, E2, E3, E4, E5, Ts]).
+    [E1, E2, E3, E4, E5, Ts]).
 %%@hidden
 -spec case_clause(term()) -> no_return().
 case_clause(CC) -> error_invalid_call(case_clause, [CC]).
@@ -244,13 +244,13 @@ receive_clause(FC, Ts) -> error_invalid_call(receive_clause, [FC, Ts]).
 
 error_invalid_call(Fn, Args) ->
     erlang:error({badcall, {{?MODULE, Fn, Args},
-                            ["should be transformed with parse transform, "
-                             "not called directly"]}}).
+        ["should be transformed with parse transform, "
+        "not called directly"]}}).
 
 transform_forms(Forms, Opts) ->
     Mapper = mk_transform_fn(Forms, Opts),
     [debug_form(erl_syntax:revert(transform_form(Mapper, Form)), Opts)
-     || Form <- Forms].
+        || Form <- Forms].
 
 debug_form(NewForm, Opts) ->
     case debug_form_generation_p(Opts) of
@@ -269,8 +269,8 @@ debug_form_generation_p(Opts) ->
 mk_transform_fn(Forms, Opts) ->
     TOpts = maybe_opts_for_reversion_of_local_implicit_funs_bug() ++ Opts,
     fun(Node) ->
-            Type = erl_syntax:type(Node),
-            transform_node(Type, Node, Forms, TOpts)
+        Type = erl_syntax:type(Node),
+        transform_node(Type, Node, Forms, TOpts)
     end.
 
 transform_form(Mapper, Form) ->
@@ -301,7 +301,7 @@ transform_node(application, Node, AllForms, _Opts) ->
                 erl_syntax:application_arguments(Node),
             FnClauses = find_fun_form_clauses(DefAsFun, AllForms),
             mk_runtime_fn_transform_revert_invoker(FnNameExpr, FnClauses,
-                                                   [RtTransforms]);
+                [RtTransforms]);
         {?MODULE, {format_fn, 2}} ->
             [FnNameExpr, DefAsFun] = erl_syntax:application_arguments(Node),
             FnClauses = find_fun_form_clauses(DefAsFun, AllForms),
@@ -311,19 +311,19 @@ transform_node(application, Node, AllForms, _Opts) ->
                 erl_syntax:application_arguments(Node),
             FnClauses = find_fun_form_clauses(DefAsFun, AllForms),
             mk_runtime_fn_transform_format_invoker(FnNameExpr, FnClauses,
-                                                   [RtTransforms]);
+                [RtTransforms]);
         {?MODULE, {expr, 1}} ->
             [Expr] = erl_syntax:application_arguments(Node),
             erl_syntax:abstract(Expr);
         {?MODULE, {expr, 2}} ->
             [Expr, RtTransforms] = erl_syntax:application_arguments(Node),
             mk_apply(?MODULE, runtime_expr_transform,
-                     [erl_syntax:abstract(Expr), RtTransforms]);
+                [erl_syntax:abstract(Expr), RtTransforms]);
         {?MODULE, {exprs, Arity}} when Arity >= 2 ->
             ExprsAndRtTransforms = erl_syntax:application_arguments(Node),
             {Exprs, RtTransforms} = split_out_last(ExprsAndRtTransforms),
             mk_apply(?MODULE, runtime_exprs_transform,
-                     [erl_syntax:abstract(Exprs), RtTransforms]);
+                [erl_syntax:abstract(Exprs), RtTransforms]);
         {?MODULE, {case_clause, 1}} ->
             [Expr] = erl_syntax:application_arguments(Node),
             case_expr_to_parse_tree_for_clause(Expr, []);
@@ -390,8 +390,8 @@ find_fun_form_clauses(DefAsFun, AllForms) ->
                 {DFnName, Arity} when is_integer(Arity) ->
                     find_function_clauses(AllForms, DFnName, Arity);
                 {Module, {FnName, Arity}} ->
-                    erlang:error({?MODULE,not_supported,mk_fn,remote_fn,
-                                  ?ff("~p:~p/~w", [Module, FnName, Arity])})
+                    erlang:error({?MODULE, not_supported, mk_fn, remote_fn,
+                        ?ff("~p:~p/~w", [Module, FnName, Arity])})
             end
     end.
 
@@ -408,25 +408,25 @@ find_function_clauses([Form | Rest], FnName, Arity) ->
             find_function_clauses(Rest, FnName, Arity)
     end;
 find_function_clauses([], FnName, Arity) ->
-    erlang:error({reference_to_undefined_function,FnName,Arity}).
+    erlang:error({reference_to_undefined_function, FnName, Arity}).
 
 mk_runtime_fn_transform_revert_invoker(FnNameExpr, FnClauses, RtTransforms) ->
     DummyFnName = erl_syntax:atom(fn_name_to_be_replaced_at_runtime),
     mk_apply(erl_syntax, revert,
-             [mk_apply(?MODULE, runtime_fn_transform,
-                       [FnNameExpr,
-                        erl_syntax:abstract(erl_syntax:function(DummyFnName,
-                                                                FnClauses))
-                        | RtTransforms])]).
+        [mk_apply(?MODULE, runtime_fn_transform,
+            [FnNameExpr,
+                erl_syntax:abstract(erl_syntax:function(DummyFnName,
+                    FnClauses))
+                | RtTransforms])]).
 
 mk_runtime_fn_transform_format_invoker(FnNameExpr, FnClauses, RtTransforms) ->
     DummyFnName = erl_syntax:atom(fn_name_to_be_replaced_at_runtime),
     mk_apply(?MODULE, erl_prettypr_format_nl,
-             [mk_apply(?MODULE, runtime_fn_transform,
-                       [FnNameExpr,
-                        erl_parse:abstract(erl_syntax:function(DummyFnName,
-                                                               FnClauses))
-                        | RtTransforms])]).
+        [mk_apply(?MODULE, runtime_fn_transform,
+            [FnNameExpr,
+                erl_parse:abstract(erl_syntax:function(DummyFnName,
+                    FnClauses))
+                | RtTransforms])]).
 
 mk_apply(M, F, Args) when is_atom(M), is_atom(F) ->
     erl_syntax:application(erl_syntax:atom(M), erl_syntax:atom(F), Args).
@@ -437,7 +437,7 @@ case_expr_to_parse_tree_for_clause(Expr, RtTransforms) ->
             [Clause | _] = erl_syntax:case_expr_clauses(Expr),
             AbsSyntaxTree = erl_parse:abstract(erl_syntax:revert(Clause)),
             mk_apply(?MODULE, runtime_expr_transform,
-                     [AbsSyntaxTree | RtTransforms]);
+                [AbsSyntaxTree | RtTransforms]);
         _OtherType ->
             Expr
     end.
@@ -452,7 +452,7 @@ if_to_parse_tree_for_clause(Expr, RtTransforms) ->
             [Clause | _] = erl_syntax:if_expr_clauses(Expr),
             AbsSyntaxTree = erl_parse:abstract(erl_syntax:revert(Clause)),
             mk_apply(?MODULE, runtime_expr_transform,
-                     [AbsSyntaxTree | RtTransforms]);
+                [AbsSyntaxTree | RtTransforms]);
         _OtherType ->
             Expr
     end.
@@ -463,7 +463,7 @@ receive_to_parse_tree_for_clause(Expr, RtTransforms) ->
             [Clause | _] = erl_syntax:receive_expr_clauses(Expr),
             AbsSyntaxTree = erl_parse:abstract(erl_syntax:revert(Clause)),
             mk_apply(?MODULE, runtime_expr_transform,
-                     [AbsSyntaxTree | RtTransforms]);
+                [AbsSyntaxTree | RtTransforms]);
         _OtherType ->
             Expr
     end.
@@ -473,7 +473,7 @@ receive_to_parse_tree_for_clause(Expr, RtTransforms) ->
 %%@hidden
 erl_prettypr_format_nl(Form) ->
     with_increased_backtrace_depth(
-      fun() -> [erl_prettypr:format(Form), "\n\n"] end).
+        fun() -> [erl_prettypr:format(Form), "\n\n"] end).
 
 %%@hidden
 runtime_fn_transform(FnName, FnParseTree) ->
@@ -482,12 +482,12 @@ runtime_fn_transform(FnName, FnParseTree) ->
 %%@hidden
 runtime_fn_transform(FnName, FnParseTree, Transforms) ->
     with_increased_backtrace_depth(
-      fun() ->
-              Clauses = erl_syntax:function_clauses(FnParseTree),
-              apply_transforms(
+        fun() ->
+            Clauses = erl_syntax:function_clauses(FnParseTree),
+            apply_transforms(
                 erl_syntax:function(erl_syntax:atom(FnName), Clauses),
                 Transforms ++ [{replace_term, call_self, FnName}])
-      end).
+        end).
 
 %%@hidden
 runtime_expr_transform(ExprParseTree) ->
@@ -496,33 +496,33 @@ runtime_expr_transform(ExprParseTree) ->
 %%@hidden
 runtime_expr_transform(ExprParseTree, Transforms) ->
     with_increased_backtrace_depth(
-      fun() ->
-              erl_syntax:copy_pos(
+        fun() ->
+            erl_syntax:copy_pos(
                 ExprParseTree,
                 apply_transforms(ExprParseTree, Transforms))
-      end).
+        end).
 
 %%@hidden
 runtime_exprs_transform(ExprParseTrees, Transforms) ->
     with_increased_backtrace_depth(
-      fun() ->
-              %% To be able to apply the splice_trees also on the
-              %% top-level, transform this into a single expr:
-              %% begin ... end. Such an expr is called a block.
-              Block1 = erl_syntax:block_expr(ExprParseTrees),
-              Block2 = apply_transforms(Block1, Transforms),
-              erl_syntax:block_expr_body(Block2)
-      end).
+        fun() ->
+            %% To be able to apply the splice_trees also on the
+            %% top-level, transform this into a single expr:
+            %% begin ... end. Such an expr is called a block.
+            Block1 = erl_syntax:block_expr(ExprParseTrees),
+            Block2 = apply_transforms(Block1, Transforms),
+            erl_syntax:block_expr_body(Block2)
+        end).
 
 apply_transforms(ParseTree, Transforms) ->
     lists:foldl(fun apply_transform/2, ParseTree, Transforms).
 
 apply_transform({replace_term, Marker, Replacement}, ParseTree) ->
     erl_syntax_lib:map(term_replacing_mapper(Marker, Replacement),
-                       ParseTree);
+        ParseTree);
 apply_transform({replace_tree, Marker, Replacement}, ParseTree) ->
     erl_syntax_lib:map(tree_replacing_mapper(Marker, Replacement),
-                       ParseTree);
+        ParseTree);
 apply_transform({splice_trees, Marker, Replacements}, ParseTree) ->
     splice_trees(Marker, Replacements, ParseTree);
 apply_transform({splice_clauses, Marker, Replacements}, ParseTree) ->
@@ -537,14 +537,14 @@ term_replacing_mapper(Marker, Replacement) ->
 
 tree_replacing_mapper(Marker, Replacement) ->
     fun(Node) ->
-            case analyze_atom_as_value(Node) of
-                {atom, Marker} -> Replacement;
-                {atom, _Other} -> Node;
-                non_atom       -> Node
-            end
+        case analyze_atom_as_value(Node) of
+            {atom, Marker} -> Replacement;
+            {atom, _Other} -> Node;
+            non_atom -> Node
+        end
     end.
 
-splice_trees(Marker, Replacements, Tree)   ->
+splice_trees(Marker, Replacements, Tree) ->
     case erl_syntax:subtrees(Tree) of
         [] ->
             Tree;
@@ -558,7 +558,7 @@ splice_trees(Marker, Replacements, Tree)   ->
                            After = [F(T) || T <- AfterMarker],
                            Before ++ Replacements ++ After
                    end
-                   || G <- Gs],
+                || G <- Gs],
             Tree1 = erl_syntax:make_tree(erl_syntax:type(Tree), Gs1),
             erl_syntax:copy_attrs(Tree, Tree1)
     end.
@@ -574,13 +574,13 @@ split_aux([X | Rest], Marker, Acc) ->
             case analyze_binary_field_body_as_atom_as_value(X) of
                 {atom, Marker} -> {lists:reverse(Acc), X, Rest};
                 {atom, _Other} -> split_aux(Rest, Marker, [X | Acc]);
-                non_atom       -> split_aux(Rest, Marker, [X | Acc])
+                non_atom -> split_aux(Rest, Marker, [X | Acc])
             end;
         _OtherType ->
             case analyze_atom_as_value(X) of
                 {atom, Marker} -> {lists:reverse(Acc), X, Rest};
                 {atom, _Other} -> split_aux(Rest, Marker, [X | Acc]);
-                non_atom       -> split_aux(Rest, Marker, [X | Acc])
+                non_atom -> split_aux(Rest, Marker, [X | Acc])
             end
     end;
 split_aux([], _Marker, _Acc) ->
@@ -588,82 +588,82 @@ split_aux([], _Marker, _Acc) ->
 
 splice_clauses(CMarker, Replacements, Tree) ->
     transform_clauses(
-      CMarker,
-      fun(_MarkerClause, _ClauseType) -> Replacements end,
-      Tree).
+        CMarker,
+        fun(_MarkerClause, _ClauseType) -> Replacements end,
+        Tree).
 
 repeat_clauses(CMarker, Repetitions, Tree) ->
     transform_clauses(
-      CMarker,
-      fun(TemplateClause, _Type) ->
-              [apply_transforms(TemplateClause, Transforms)
-               || Transforms <- Repetitions]
-      end,
-      Tree).
+        CMarker,
+        fun(TemplateClause, _Type) ->
+            [apply_transforms(TemplateClause, Transforms)
+                || Transforms <- Repetitions]
+        end,
+        Tree).
 
 transform_clauses(CMarker, CTransformer, Tree) ->
     erl_syntax_lib:map(
-      fun(Node) ->
-              case erl_syntax:type(Node) of
-                  case_expr ->
-                      Arg = erl_syntax:case_expr_argument(Node),
-                      Cs  = erl_syntax:case_expr_clauses(Node),
-                      case split_clauses_on_marker(Cs, CMarker, 'case') of
-                          marker_not_found ->
-                              Node;
-                          {Before, MarkerClause, After} ->
-                              New = CTransformer(MarkerClause, 'case'),
-                              Cs1 = Before ++ New ++ After,
-                              erl_syntax:case_expr(Arg, Cs1)
-                      end;
-                  fun_expr ->
-                      Cs = erl_syntax:fun_expr_clauses(Node),
-                      case split_clauses_on_marker(Cs, CMarker, 'fun') of
-                          marker_not_found ->
-                              Node;
-                          {Before, MarkerClause, After} ->
-                              New = CTransformer(MarkerClause, 'fun'),
-                              Cs1 = Before ++ New ++ After,
-                              erl_syntax:fun_expr(Cs1)
-                      end;
-                  function ->
-                      FnName = erl_syntax:function_name(Node),
-                      Cs = erl_syntax:function_clauses(Node),
-                      case split_clauses_on_marker(Cs, CMarker, function) of
-                          marker_not_found ->
-                              Node;
-                          {Before, MarkerClause, After} ->
-                              New = CTransformer(MarkerClause, function),
-                              Cs1 = Before ++ New ++ After,
-                              erl_syntax:function(FnName, Cs1)
-                      end;
-                  if_expr ->
-                      Cs = erl_syntax:if_expr_clauses(Node),
-                      case split_clauses_on_marker(Cs, CMarker, 'if') of
-                          marker_not_found ->
-                              Node;
-                          {Before, MarkerClause, After} ->
-                              New = CTransformer(MarkerClause, 'if'),
-                              Cs1 = Before ++ New ++ After,
-                              erl_syntax:if_expr(Cs1)
-                      end;
-                  receive_expr ->
-                      Cs = erl_syntax:receive_expr_clauses(Node),
-                      Tmo = erl_syntax:receive_expr_timeout(Node),
-                      Action = erl_syntax:receive_expr_action(Node), %% after
-                      case split_clauses_on_marker(Cs, CMarker, 'if') of
-                          marker_not_found ->
-                              Node;
-                          {Before, MarkerClause, After} ->
-                              New = CTransformer(MarkerClause, 'receive'),
-                              Cs1 = Before ++ New ++ After,
-                              erl_syntax:receive_expr(Cs1, Tmo, Action)
-                      end;
-                  _Other ->
-                      Node
-              end
-      end,
-      Tree).
+        fun(Node) ->
+            case erl_syntax:type(Node) of
+                case_expr ->
+                    Arg = erl_syntax:case_expr_argument(Node),
+                    Cs = erl_syntax:case_expr_clauses(Node),
+                    case split_clauses_on_marker(Cs, CMarker, 'case') of
+                        marker_not_found ->
+                            Node;
+                        {Before, MarkerClause, After} ->
+                            New = CTransformer(MarkerClause, 'case'),
+                            Cs1 = Before ++ New ++ After,
+                            erl_syntax:case_expr(Arg, Cs1)
+                    end;
+                fun_expr ->
+                    Cs = erl_syntax:fun_expr_clauses(Node),
+                    case split_clauses_on_marker(Cs, CMarker, 'fun') of
+                        marker_not_found ->
+                            Node;
+                        {Before, MarkerClause, After} ->
+                            New = CTransformer(MarkerClause, 'fun'),
+                            Cs1 = Before ++ New ++ After,
+                            erl_syntax:fun_expr(Cs1)
+                    end;
+                function ->
+                    FnName = erl_syntax:function_name(Node),
+                    Cs = erl_syntax:function_clauses(Node),
+                    case split_clauses_on_marker(Cs, CMarker, function) of
+                        marker_not_found ->
+                            Node;
+                        {Before, MarkerClause, After} ->
+                            New = CTransformer(MarkerClause, function),
+                            Cs1 = Before ++ New ++ After,
+                            erl_syntax:function(FnName, Cs1)
+                    end;
+                if_expr ->
+                    Cs = erl_syntax:if_expr_clauses(Node),
+                    case split_clauses_on_marker(Cs, CMarker, 'if') of
+                        marker_not_found ->
+                            Node;
+                        {Before, MarkerClause, After} ->
+                            New = CTransformer(MarkerClause, 'if'),
+                            Cs1 = Before ++ New ++ After,
+                            erl_syntax:if_expr(Cs1)
+                    end;
+                receive_expr ->
+                    Cs = erl_syntax:receive_expr_clauses(Node),
+                    Tmo = erl_syntax:receive_expr_timeout(Node),
+                    Action = erl_syntax:receive_expr_action(Node), %% after
+                    case split_clauses_on_marker(Cs, CMarker, 'if') of
+                        marker_not_found ->
+                            Node;
+                        {Before, MarkerClause, After} ->
+                            New = CTransformer(MarkerClause, 'receive'),
+                            Cs1 = Before ++ New ++ After,
+                            erl_syntax:receive_expr(Cs1, Tmo, Action)
+                    end;
+                _Other ->
+                    Node
+            end
+        end,
+        Tree).
 
 split_clauses_on_marker(Clauses, CMarker, Type) ->
     csplit_aux(Clauses, CMarker, Type, []).
@@ -673,15 +673,15 @@ csplit_aux([C | Rest], CMarker, Type, Acc) ->
         [CPattern | _] -> %% case clause or function clause
             case analyze_atom_as_value(CPattern) of
                 {atom, CMarker} -> {lists:reverse(Acc), C, Rest};
-                {atom, _Other}  -> csplit_aux(Rest, CMarker, Type, [C | Acc]);
-                non_atom        -> csplit_aux(Rest, CMarker, Type, [C | Acc])
+                {atom, _Other} -> csplit_aux(Rest, CMarker, Type, [C | Acc]);
+                non_atom -> csplit_aux(Rest, CMarker, Type, [C | Acc])
             end;
         [] when Type == 'if' -> %% an if-clause
             G = erl_syntax:clause_guard(C),
             case analyze_guard_as_atom_as_value(G) of
                 {atom, CMarker} -> {lists:reverse(Acc), C, Rest};
-                {atom, _Other}  -> csplit_aux(Rest, CMarker, Type, [C | Acc]);
-                non_atom_guard  -> csplit_aux(Rest, CMarker, Type, [C | Acc])
+                {atom, _Other} -> csplit_aux(Rest, CMarker, Type, [C | Acc]);
+                non_atom_guard -> csplit_aux(Rest, CMarker, Type, [C | Acc])
             end;
         _CPatterns ->
             csplit_aux(Rest, CMarker, Type, [C | Acc])
@@ -699,7 +699,7 @@ analyze_guard_as_atom_as_value(G) ->
                     [C1 | _] = erl_syntax:conjunction_body(D1),
                     case analyze_atom_as_value(C1) of
                         {atom, V} -> {atom, V};
-                        non_atom  -> non_atom_guard
+                        non_atom -> non_atom_guard
                     end;
                 _ ->
                     non_atom_guard
@@ -725,7 +725,7 @@ analyze_function_name(Tree) ->
 analyze_atom_as_value(Node) ->
     case erl_syntax:type(Node) of
         atom -> {atom, erl_syntax:atom_value(Node)};
-        _    -> non_atom
+        _ -> non_atom
     end.
 
 with_increased_backtrace_depth(Fun) ->
@@ -755,7 +755,7 @@ with_increased_backtrace_depth(Fun) ->
             erlang:system_flag(backtrace_depth, Old),
             Fun()
     catch error:badarg -> %% Not available
-            Fun()
+        Fun()
     end.
 
 maybe_opts_for_reversion_of_local_implicit_funs_bug() ->
@@ -763,18 +763,18 @@ maybe_opts_for_reversion_of_local_implicit_funs_bug() ->
     {ok, [ImplicitFunExpr1]} = erl_parse:parse_exprs(Tokens),
     ImplicitFunExpr2 =
         erl_syntax:revert(
-          erl_syntax:copy_pos(
-            ImplicitFunExpr1,
-            erl_syntax:implicit_fun(
-              erl_syntax:copy_pos(ImplicitFunExpr1, erl_syntax:atom(x)),
-              erl_syntax:copy_pos(ImplicitFunExpr1, erl_syntax:integer(17))))),
+            erl_syntax:copy_pos(
+                ImplicitFunExpr1,
+                erl_syntax:implicit_fun(
+                    erl_syntax:copy_pos(ImplicitFunExpr1, erl_syntax:atom(x)),
+                    erl_syntax:copy_pos(ImplicitFunExpr1, erl_syntax:integer(17))))),
     case {ImplicitFunExpr1, ImplicitFunExpr2} of
         {Same, Same} ->
             %% No bug if the erl_parse format is the same
             %% as that from erl_syntax:revert, no bug-workaround options needed
             [];
         {{'fun', _, {function, x, 17}},
-         {'fun', _, {function, {atom, _, x}, {integer, _, 17}}}} ->
+            {'fun', _, {function, {atom, _, x}, {integer, _, 17}}}} ->
             %% The erl_parse format and the erl_syntax format are not the same!
             %% Found the bug when reverting local implicit funs in r16b03
             [implicit_fun_revert_bug_r16b03]
